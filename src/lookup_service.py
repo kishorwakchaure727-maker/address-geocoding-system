@@ -121,26 +121,33 @@ class AddressLookupService:
         # Parse top result
         parsed = self.geocoder.parse_geocode_result(results[0])
         
+        # Generate links
+        maps_link = f"https://www.google.com/maps/search/?api=1&query={parsed['lat']},{parsed['lng']}&query_place_id={parsed['place_id']}"
+        
+        search_query = f"{company} {parsed['formatted_address']}".replace(' ', '+')
+        search_link = f"https://www.google.com/search?q={search_query}"
+        
         # Build record
         record = {
-            'company_raw': company,
-            'company_normalized': company_normalized,
-            'site_hint': site_hint or '',
-            'street_1': parsed['street_1'],
-            'street_2': parsed['street_2'],
-            'city': parsed['city'],
-            'state_region': parsed['state_region'],
-            'postal_code': parsed['postal_code'],
-            'country': parsed['country'],
-            'lat': parsed['lat'],
-            'lng': parsed['lng'],
-            'source': 'google',
-            'confidence': parsed['confidence'],
-            'geocoder_place_id': parsed['place_id'],
-            'qa_status': 'auto' if parsed['confidence'] >= config.CONFIDENCE_THRESHOLD else 'review',
-            'notes': '',
-            'created_at': datetime.utcnow().isoformat(),
-            'updated_at': datetime.utcnow().isoformat(),
+            'COMPANY NAME (RAW)': company,
+            'COMPANY NAME (NORMALIZED)': company_normalized,
+            'STREET ADDRESS1': parsed['street_1'],
+            'STREET ADDRESS2': parsed['street_2'],
+            'CITY NAME': parsed['city'],
+            'STATE NAME': parsed['state_region'],
+            'PIN CODE': parsed['postal_code'],
+            'COUNTRY NAME': parsed['country_long'],
+            'MAPS LINK': maps_link,
+            'SEARCH LINK': search_link,
+            'LAT': parsed['lat'],
+            'LNG': parsed['lng'],
+            'SOURCE': 'google',
+            'CONFIDENCE': parsed['confidence'],
+            'GEOCODER PLACE ID': parsed['place_id'],
+            'QA STATUS': 'auto' if parsed['confidence'] >= config.CONFIDENCE_THRESHOLD else 'review',
+            'NOTES': '',
+            'CREATED AT': datetime.utcnow().isoformat(),
+            'UPDATED AT': datetime.utcnow().isoformat(),
         }
         
         # Validate

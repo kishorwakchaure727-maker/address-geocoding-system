@@ -313,20 +313,30 @@ def main_page():
             
             with col1:
                 st.subheader("📍 Address")
-                st.write(f"**Company:** {record.get('company_normalized')}")
-                st.write(f"**Street:** {record.get('street_1')}")
-                if record.get('street_2'):
-                    st.write(f"**Street 2:** {record.get('street_2')}")
-                st.write(f"**City:** {record.get('city')}")
-                st.write(f"**State/Region:** {record.get('state_region')}")
-                st.write(f"**Postal Code:** {record.get('postal_code')}")
-                st.write(f"**Country:** {record.get('country')}")
+                st.write(f"**Company:** {record.get('COMPANY NAME (NORMALIZED)')}")
+                st.write(f"**Street:** {record.get('STREET ADDRESS1')}")
+                if record.get('STREET ADDRESS2'):
+                    st.write(f"**Street 2:** {record.get('STREET ADDRESS2')}")
+                st.write(f"**City:** {record.get('CITY NAME')}")
+                st.write(f"**State/Region:** {record.get('STATE NAME')}")
+                st.write(f"**Postal Code:** {record.get('PIN CODE')}")
+                st.write(f"**Country:** {record.get('COUNTRY NAME')}")
+                
+                st.markdown("---")
+                st.subheader("🔗 Source Links")
+                col_a, col_b = st.columns(2)
+                with col_a:
+                    if record.get('MAPS LINK'):
+                        st.link_button("🗺️ Google Maps", record.get('MAPS LINK'), use_container_width=True)
+                with col_b:
+                    if record.get('SEARCH LINK'):
+                        st.link_button("🔍 Web Search", record.get('SEARCH LINK'), use_container_width=True)
             
             with col2:
                 st.subheader("📊 Details")
                 
                 # Confidence meter
-                confidence = float(record.get('confidence', 0))
+                confidence = float(record.get('CONFIDENCE', 0))
                 confidence_pct = confidence * 100
                 
                 if confidence >= config.CONFIDENCE_THRESHOLD:
@@ -334,16 +344,16 @@ def main_page():
                 else:
                     st.metric("Confidence", f"{confidence_pct:.1f}%", "⚠️ Low - Needs Review")
                 
-                st.write(f"**QA Status:** {record.get('qa_status')}")
-                st.write(f"**Coordinates:** {record.get('lat')}, {record.get('lng')}")
-                st.write(f"**Place ID:** {record.get('geocoder_place_id', 'N/A')}")
+                st.write(f"**QA Status:** {record.get('QA STATUS')}")
+                st.write(f"**Coordinates:** {record.get('LAT')}, {record.get('LNG')}")
+                st.write(f"**Place ID:** {record.get('GEOCODER PLACE ID', 'N/A')}")
             
             # Map
-            if record.get('lat') and record.get('lng'):
+            if record.get('LAT') and record.get('LNG'):
                 st.subheader("🗺️ Map")
                 map_df = pd.DataFrame({
-                    'lat': [float(record.get('lat'))],
-                    'lon': [float(record.get('lng'))]
+                    'lat': [float(record.get('LAT'))],
+                    'lon': [float(record.get('LNG'))]
                 })
                 st.map(map_df, zoom=12)
             
@@ -400,17 +410,19 @@ def batch_page():
                 if record:
                     results.append({
                         **dict(row),
-                        'normalized_company': record.get('company_normalized'),
-                        'street_1': record.get('street_1'),
-                        'city': record.get('city'),
-                        'state_region': record.get('state_region'),
-                        'postal_code': record.get('postal_code'),
-                        'country': record.get('country'),
-                        'lat': record.get('lat'),
-                        'lng': record.get('lng'),
-                        'confidence': record.get('confidence'),
-                        'qa_status': record.get('qa_status'),
-                        'source': source,
+                        'COMPANY NAME (NORMALIZED)': record.get('COMPANY NAME (NORMALIZED)'),
+                        'STREET ADDRESS1': record.get('STREET ADDRESS1'),
+                        'CITY NAME': record.get('CITY NAME'),
+                        'STATE NAME': record.get('STATE NAME'),
+                        'PIN CODE': record.get('PIN CODE'),
+                        'COUNTRY NAME': record.get('COUNTRY NAME'),
+                        'MAPS LINK': record.get('MAPS LINK'),
+                        'SEARCH LINK': record.get('SEARCH LINK'),
+                        'LAT': record.get('LAT'),
+                        'LNG': record.get('LNG'),
+                        'CONFIDENCE': record.get('CONFIDENCE'),
+                        'QA STATUS': record.get('QA STATUS'),
+                        'SOURCE': source,
                     })
                 else:
                     results.append({
@@ -501,8 +513,8 @@ def review_page():
     # Display as table
     st.dataframe(
         df[[
-            'company_normalized', 'city', 'country', 
-            'confidence', 'qa_status', 'notes'
+            'COMPANY NAME (NORMALIZED)', 'CITY NAME', 'COUNTRY NAME', 
+            'CONFIDENCE', 'QA STATUS', 'NOTES'
         ]],
         use_container_width=True
     )

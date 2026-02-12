@@ -11,7 +11,7 @@ print(f"DEBUG: Current working directory: {os.getcwd()}")
 print(f"DEBUG: Python path: {sys.path}")
 
 # Add parent directory to path
-project_root = str(Path(__file__).parent.parent)
+project_root = str(Path(__file__).parent)
 sys.path.insert(0, project_root)
 print(f"DEBUG: Added {project_root} to sys.path")
 

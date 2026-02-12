@@ -104,6 +104,23 @@ def configuration_page():
             type="password",
             help="Get this from Google Cloud Console > APIs & Services > Credentials"
         )
+
+        st.markdown("---")
+        st.subheader("🤖 Agentic AI (Gemini)")
+        st.caption("Optional: Enable AI-powered verification by searching the web.")
+        
+        ai_key = st.text_input(
+            "Google AI API Key",
+            value=st.session_state.get('ai_key', ""),
+            type="password",
+            help="Get your key from Google AI Studio (Gemini)"
+        )
+        
+        use_agentic = st.checkbox(
+            "Enable Fully Agentic Mode by default",
+            value=st.session_state.get('use_agentic', False),
+            help="If checked, the system will verify every result with AI"
+        )
         
         st.markdown("---")
         st.subheader("📊 Google Sheets")
@@ -169,6 +186,8 @@ def configuration_page():
             st.session_state.api_key = api_key
             st.session_state.sheet_id = sheet_id
             st.session_state.service_account_json = service_json
+            st.session_state.ai_key = ai_key
+            st.session_state.use_agentic = use_agentic
             
             # Initialize service
             with st.spinner("Initializing service..."):
@@ -295,7 +314,12 @@ def main_page():
     
     if submitted and company:
         with st.spinner("Searching..."):
-            record, source = st.session_state.service.lookup(company, site_hint or None)
+            record, source = st.session_state.service.lookup(
+                company, 
+                site_hint or None,
+                agentic_verify=st.session_state.get('use_agentic', False),
+                ai_api_key=st.session_state.get('ai_key', "")
+            )
         
         if record:
             # Source badge
@@ -347,6 +371,48 @@ def main_page():
                 st.write(f"**QA Status:** {record.get('QA STATUS')}")
                 st.write(f"**Coordinates:** {record.get('LAT')}, {record.get('LNG')}")
                 st.write(f"**Place ID:** {record.get('GEOCODER PLACE ID', 'N/A')}")
+            
+            # Agentic AI Verification Result
+            if record.get('AI VERIFICATION STATUS') and record.get('AI VERIFICATION STATUS') != 'skipped':
+                st.markdown("---")
+                st.subheader("🤖 AI Verification Result")
+                
+                status = record.get('AI VERIFICATION STATUS')
+                confidence = float(record.get('AI CONFIDENCE', 0))
+                
+                if status == 'verified':
+                    st.success(f"**Verified with AI** (Confidence: {confidence*100:.1f}%)")
+                elif status == 'uncertain':
+                    st.warning(f"**AI Uncertain** (Confidence: {confidence*100:.1f}%)")
+                else:
+                    st.error(f"**AI Verification Error**")
+                
+                if record.get('NOTES'):
+                    st.info(f"**AI Insight:** {record.get('NOTES')}")
+                    
+                if record.get('AI SOURCE URL'):
+                    st.write(f"**Source Website Found:** [{record.get('AI SOURCE URL')}]({record.get('AI SOURCE URL')})")
+            
+            # Agentic AI Verification Result
+            if record.get('AI VERIFICATION STATUS') and record.get('AI VERIFICATION STATUS') != 'skipped':
+                st.markdown("---")
+                st.subheader("🤖 AI Verification Result")
+                
+                status = record.get('AI VERIFICATION STATUS')
+                confidence = float(record.get('AI CONFIDENCE', 0))
+                
+                if status == 'verified':
+                    st.success(f"**Verified with AI** (Confidence: {confidence*100:.1f}%)")
+                elif status == 'uncertain':
+                    st.warning(f"**AI Uncertain** (Confidence: {confidence*100:.1f}%)")
+                else:
+                    st.error(f"**AI Verification Error**")
+                
+                if record.get('NOTES'):
+                    st.info(f"**AI Insight:** {record.get('NOTES')}")
+                    
+                if record.get('AI SOURCE URL'):
+                    st.write(f"**Source Website Found:** [{record.get('AI SOURCE URL')}]({record.get('AI SOURCE URL')})")
             
             # Map
             if record.get('LAT') and record.get('LNG'):
@@ -405,7 +471,12 @@ def batch_page():
                 
                 status_text.text(f"Processing {i+1}/{len(df)}: {company}")
                 
-                record, source = st.session_state.service.lookup(company, site_hint)
+                record, source = st.session_state.service.lookup(
+                    company, 
+                    site_hint,
+                    agentic_verify=st.session_state.get('use_agentic', False),
+                    ai_api_key=st.session_state.get('ai_key', "")
+                )
                 
                 if record:
                     results.append({

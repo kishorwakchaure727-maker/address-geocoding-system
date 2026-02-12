@@ -15,6 +15,9 @@ PROJECT_ROOT = Path(__file__).parent.parent
 # Google Maps API Configuration
 GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY", "")
 
+# Google AI (Gemini) Configuration
+GOOGLE_AI_API_KEY = os.getenv("GOOGLE_AI_API_KEY", "")
+
 # Google Sheets Configuration
 GOOGLE_SHEETS_ID = os.getenv("GOOGLE_SHEETS_ID", "")
 WORKSHEET_NAME = os.getenv("WORKSHEET_NAME", "address_registry")

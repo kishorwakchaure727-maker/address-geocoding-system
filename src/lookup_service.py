@@ -34,7 +34,9 @@ class AddressLookupService:
     def lookup(
         self,
         company: str,
-        site_hint: str = None
+        site_hint: str = None,
+        agentic_verify: bool = False,
+        ai_api_key: str = None
     ) -> Tuple[Optional[Dict], str]:
         """
         Look up company address with automatic caching and geocoding.
@@ -42,18 +44,18 @@ class AddressLookupService:
         Args:
             company: Company name (raw input)
             site_hint: Optional location hint (e.g., "Pune, India")
+            agentic_verify: Whether to use AI for secondary verification
+            ai_api_key: Optional Gemini API key if not in config
         
         Returns:
             Tuple of (address_record, source)
-            source can be: 'cache', 'storage', 'geocoded', 'not_found'
         """
-        # Normalize company name
+        # ... (rest of the normalization and cache logic) ...
         company_normalized = normalize_company(company)
         
         if not company_normalized:
             return None, 'invalid_input'
         
-        # Extract country hint for filtering
         country_hint = extract_country_hint(site_hint) if site_hint else None
         city_hint = None
         if site_hint and ',' in site_hint:
@@ -72,7 +74,6 @@ class AddressLookupService:
         # 2. Check storage (Google Sheets)
         self._init_storage()
         
-        # Try exact match
         stored = self.storage.find_by_exact_match(
             company_normalized,
             city=city_hint,
@@ -81,7 +82,6 @@ class AddressLookupService:
         
         if stored:
             print(f"✓ Storage hit (exact match) for {company_normalized}")
-            # Update cache
             self.cache.set(stored, company_normalized, city_hint, country_hint)
             return stored, 'storage'
         
@@ -127,6 +127,27 @@ class AddressLookupService:
         search_query = f"{company} {parsed['formatted_address']}".replace(' ', '+')
         search_link = f"https://www.google.com/search?q={search_query}"
         
+        # NEW: Agentic AI Verification
+        ai_verification = {
+            "ai_status": "skipped",
+            "ai_confidence": 0,
+            "ai_source_url": "",
+            "ai_message": ""
+        }
+        
+        if agentic_verify:
+            from src.agentic import AgenticVerifier
+            print(f"🤖 Running Agentic AI Verification for {company}...")
+            verifier = AgenticVerifier(api_key=ai_api_key)
+            ai_res = verifier.verify(company, parsed['formatted_address'])
+            
+            ai_verification = {
+                "ai_status": ai_res.get("status", "error"),
+                "ai_confidence": ai_res.get("confidence", 0),
+                "ai_source_url": ai_res.get("source_url", ""),
+                "ai_message": ai_res.get("message", "")
+            }
+
         # Build record
         record = {
             'COMPANY NAME (RAW)': company,
@@ -145,7 +166,10 @@ class AddressLookupService:
             'CONFIDENCE': parsed['confidence'],
             'GEOCODER PLACE ID': parsed['place_id'],
             'QA STATUS': 'auto' if parsed['confidence'] >= config.CONFIDENCE_THRESHOLD else 'review',
-            'NOTES': '',
+            'NOTES': ai_verification['ai_message'],
+            'AI VERIFICATION STATUS': ai_verification['ai_status'],
+            'AI CONFIDENCE': ai_verification['ai_confidence'],
+            'AI SOURCE URL': ai_verification['ai_source_url'],
             'CREATED AT': datetime.utcnow().isoformat(),
             'UPDATED AT': datetime.utcnow().isoformat(),
         }

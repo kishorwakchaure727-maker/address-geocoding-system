@@ -41,10 +41,30 @@ Sound enthusiastic, premium, and helpful. Always greet the user warmly if it's t
 """
 
 def get_resy_response(user_text):
-    """Generate a response from Gemini for Resy."""
+    """Generate a response from Gemini for Resy, with local fallback for onboarding."""
+    # Local Knowledge Base for Onboarding (No API Key needed)
+    LOCAL_KB = {
+        "lookup": "The **Individual Lookup** page allows you to find the address of a single company. Just enter the name and an optional site hint (like 'India') to get started!",
+        "batch": "The **Batch Processing** page is perfect for processing hundreds of addresses at once. Just upload a CSV with a 'company' column and download the results!",
+        "config": "In the **Configuration** tab, you can add your Google Maps and AI API keys to unlock the full power of the system, including AI verification and shared Google Sheets.",
+        "stats": "The **Stats** page shows you how many addresses have been found and how much money you've saved using the multi-tier caching system!",
+        "instructions": "The **Instructions** page contains a detailed technical overview and a diagram of our multi-tier lookup architecture.",
+        "hello": "Hello! I'm Resy, your AI guide. I can help you navigate the app or answer questions about our geocoding features. How can I assist you today?",
+        "hi": "Hi there! I'm Resy. Need help with lookups, batch processing, or configuration? Just ask!",
+        "who are you": "I'm Resy, the intelligent assistant for this Address Geocoding System. I was designed to make your data standardization journey smooth and easy!"
+    }
+    
+    user_text_lower = user_text.lower()
+    
+    # Check local knowledge first for onboarding
+    for key in LOCAL_KB:
+        if key in user_text_lower:
+            return LOCAL_KB[key]
+            
+    # If not in local KB, try Gemini
     api_key = st.session_state.get('ai_key') or os.getenv('GOOGLE_AI_API_KEY')
     if not api_key:
-        return "I'd love to help, but I need a Google AI API Key configured first! Please check the Configuration tab."
+        return "I can answer basic questions about the app right now, but for advanced AI verification, please add a **Google AI API Key** in the Configuration tab! 🔑"
     
     try:
         genai.configure(api_key=api_key)
@@ -379,7 +399,7 @@ def render_resy_assistant():
         .resy-button-container {
             position: fixed !important;
             bottom: 30px !important;
-            right: 30px !important;
+            left: 30px !important;
             z-index: 1000000 !important;
         }
         
@@ -401,11 +421,11 @@ def render_resy_assistant():
             box-shadow: 0 10px 30px rgba(110, 142, 251, 0.5) !important;
         }
 
-        /* Fixed Chat Window container */
+        /* Fixed Chat Window container (Moved to Left) */
         div[data-testid="stVerticalBlock"]:has(div.resy-chat-marker) {
             position: fixed !important;
             bottom: 100px !important;
-            right: 30px !important;
+            left: 30px !important;
             width: 420px !important;
             background: #ffffff !important;
             padding: 25px !important;

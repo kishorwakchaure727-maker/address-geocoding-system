@@ -100,44 +100,6 @@ if 'configured' not in st.session_state:
 if 'service' not in st.session_state:
     st.session_state.service = None
 
-# --- Render Resy (Floating Assistant) ---
-def render_floating_assistant():
-    """Renders a persistent companion (Resy) for help and guidance."""
-    # State for visibility
-    if 'show_assistant' not in st.session_state:
-        st.session_state.show_assistant = False
-
-    # Side-bar call-to-action (Placed at the top of sidebar)
-    st.sidebar.markdown("### 🤖 Assistant: Resy")
-    if st.sidebar.button("✨ Talk to Resy (Voice AI)", type="primary", use_container_width=True, key="resy_sidebar_toggle"):
-        st.session_state.show_assistant = not st.session_state.show_assistant
-        st.rerun()
-
-    if st.session_state.show_assistant:
-        st.markdown("---")
-        with st.container(border=True):
-            st.subheader("🤖 Resy: Your AI Guide")
-            st.info("I am Resy! I can explain how to use this app or help you with configuration. Ask me anything!")
-            
-            user_input = st.text_input("How can I help you?", key="resy_chat_input", placeholder="e.g. What does this app do?")
-            
-            if user_input:
-                with st.spinner("Resy is thinking..."):
-                    reply = get_resy_response(user_input)
-                    st.success(f"**Resy:** {reply}")
-                    
-                    audio_html = speak_text(reply)
-                    if audio_html:
-                        st.components.v1.html(audio_html, height=0)
-                        st.audio(base64.b64decode(audio_html.split(',')[1].replace('">', '')), format="audio/mp3")
-            
-            if st.button("Close Resy Window", key="close_resy_btn"):
-                st.session_state.show_assistant = False
-                st.rerun()
-    st.sidebar.markdown("---")
-
-render_floating_assistant()
-
 
 def apply_runtime_config():
     """Apply configuration from session state to environment."""
@@ -718,9 +680,72 @@ def instructions_page():
     """)
     
     st.info("💡 **Pro Tip:** Sharing your Google Sheet with team members allows everyone to benefit from shared caching!")
+# --- Main Application Flow ---
+st.sidebar.title("🌍 Geocoding System")
 
+# Configuration status indicator
+if st.session_state.configured:
+    st.sidebar.success("✅ Service Active")
+else:
+    st.sidebar.warning("⚠️ Pending Config")
+
+st.sidebar.markdown("---")
+
+# Navigation Selection
+# We ensure the index is always valid
+nav_options = ["📖 Instructions", "⚙️ Configuration", "🔍 Lookup", "📊 Batch", "📈 Stats", "🔍 Review Queue"]
+page = st.sidebar.radio("Navigation", nav_options)
+
+st.sidebar.markdown("---")
+
+# Quick stats in sidebar
+if st.session_state.configured and st.session_state.service:
+    try:
+        from src.storage import get_cache
+        cache = get_cache()
+        cache_stats = cache.get_stats()
+        st.sidebar.caption(f"💾 Cache: {cache_stats.get('memory_entries', 0)} entries")
+    except:
+        pass
+
+# Page Routing
+if page == "📖 Instructions":
+    instructions_page()
+elif page == "⚙️ Configuration":
+    configuration_page()
+elif page == "🔍 Lookup":
+    main_page()
+elif page == "📊 Batch":
+    batch_page()
+elif page == "📈 Stats":
+    stats_page()
+elif page == "🔍 Review Queue":
+    review_page()
 
 # Footer
 st.sidebar.markdown("---")
-st.sidebar.caption("Address Geocoding System v1.0")
-st.sidebar.caption("Built with ❤️ using Streamlit")
+st.sidebar.caption("v1.0 • Built with ❤️ using Streamlit")
+
+
+# --- Resy Assistant (Sidebar Integration) ---
+def render_resy_assistant():
+    """Renders Resy in a nice sidebar expander."""
+    st.sidebar.markdown("---")
+    with st.sidebar.expander("🤖 **Resy: AI Voice Guide**", expanded=st.session_state.get('show_resy', False)):
+        st.info("I'm Resy! Ask me anything about how this app works.")
+        
+        user_input = st.text_input("Ask Resy:", key="resy_final_input", placeholder="e.g. How to use batch?")
+        
+        if user_input:
+            with st.spinner("Thinking..."):
+                reply = get_resy_response(user_input)
+                st.write(f"**Resy:** {reply}")
+                
+                audio_html = speak_text(reply)
+                if audio_html:
+                    st.components.v1.html(audio_html, height=0)
+                    # We also add a small play button as fallback
+                    st.audio(base64.b64decode(audio_html.split(',')[1].replace('">', '')), format="audio/mp3")
+
+# Call Resy
+render_resy_assistant()

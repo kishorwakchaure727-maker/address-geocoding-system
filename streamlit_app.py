@@ -363,6 +363,9 @@ def instructions_page():
 # --- Main Flow ---
 st.sidebar.title("🌍 Geocoding System")
 
+# NEW: Resy at the top of Sidebar
+render_resy_assistant()
+
 if st.session_state.configured:
     st.sidebar.success("✅ Service Active")
 else:
@@ -385,78 +388,56 @@ elif page == "📈 Stats":
 elif page == "🔍 Review Queue":
     review_page()
 
-# --- Truly Floating Resy Assistant ---
+# --- Sidebar Integrated Resy Assistant ---
 def render_resy_assistant():
-    """Renders Resy as a floating companion at the bottom right."""
+    """Renders Resy as a floating-style chatbox at the top of the sidebar."""
     # State for visibility
     if 'show_resy' not in st.session_state:
         st.session_state.show_resy = False
 
-    # Floating UI Styles - Targeted via specialized container
+    # Sidebar Chatbox Styles
     st.markdown("""
         <style>
-        /* Target the specialized container for the floating button */
-        .resy-button-container {
-            position: fixed !important;
-            bottom: 30px !important;
-            left: 30px !important;
-            z-index: 1000000 !important;
+        /* Chatbox container in sidebar */
+        .resy-sidebar-box {
+            background: linear-gradient(135deg, rgba(110, 142, 251, 0.1), rgba(167, 119, 227, 0.1));
+            border-radius: 15px;
+            padding: 15px;
+            border: 1px solid rgba(110, 142, 251, 0.3);
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
         }
         
-        .resy-button-container button {
-            width: 180px !important;
-            height: 55px !important;
-            border-radius: 30px !important;
+        .resy-sidebar-trigger {
+            width: 100% !important;
+            border-radius: 10px !important;
             background: linear-gradient(135deg, #6e8efb, #a777e3) !important;
             color: white !important;
             font-weight: bold !important;
-            font-size: 16px !important;
-            box-shadow: 0 6px 20px rgba(0,0,0,0.35) !important;
-            border: 2px solid rgba(255,255,255,0.4) !important;
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
-        }
-        
-        .resy-button-container button:hover {
-            transform: scale(1.08) translateY(-3px) !important;
-            box-shadow: 0 10px 30px rgba(110, 142, 251, 0.5) !important;
+            border: none !important;
+            margin-bottom: 10px !important;
         }
 
-        /* Fixed Chat Window container (Moved to Left) */
-        div[data-testid="stVerticalBlock"]:has(div.resy-chat-marker) {
-            position: fixed !important;
-            bottom: 100px !important;
-            left: 30px !important;
-            width: 420px !important;
-            background: #ffffff !important;
-            padding: 25px !important;
-            border-radius: 20px !important;
-            box-shadow: 0 15px 50px rgba(0,0,0,0.3) !important;
-            z-index: 999999 !important;
-            border: 1px solid rgba(0,0,0,0.1) !important;
-            backdrop-filter: blur(10px);
-        }
+        /* Marker for internal targeting if needed */
+        .resy-sb-marker { display: none; }
         </style>
     """, unsafe_allow_html=True)
 
-    # Floating Button inside targeted container
-    st.markdown('<div class="resy-button-container">', unsafe_allow_html=True)
-    btn_label = "❌ Close Resy" if st.session_state.show_resy else "🤖 Talk to Resy"
-    if st.button(btn_label, key="resy_floating_trigger_v7"):
-        st.session_state.show_resy = not st.session_state.show_resy
-        st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    if st.session_state.show_resy:
-         # Marker div to target the vertical block
-        st.markdown('<div class="resy-chat-marker"></div>', unsafe_allow_html=True)
-        with st.container():
-            st.subheader("🤖 Resy: Your AI Guide")
-            st.caption("Ask me anything about the app!")
+    with st.sidebar.container():
+        st.markdown('<div class="resy-sidebar-box">', unsafe_allow_html=True)
+        st.subheader("🤖 Resy Guide")
+        
+        btn_label = "❌ Close Assistant" if st.session_state.show_resy else "🤖 Chat with Resy"
+        if st.button(btn_label, key="resy_sb_trigger_v1", use_container_width=True):
+            st.session_state.show_resy = not st.session_state.show_resy
+            st.rerun()
             
-            user_input = st.text_input("How can I help you today?", key="resy_input_v7", placeholder="e.g. How do I use batch processing?")
+        if st.session_state.show_resy:
+            st.markdown("---")
+            user_input = st.text_input("Ask me anything:", key="resy_input_sb_v1", placeholder="How do I use Batch?")
             
             if user_input:
-                with st.spinner("Resy is thinking..."):
+                with st.spinner("Thinking..."):
                     reply = get_resy_response(user_input)
                     st.info(f"**Resy:** {reply}")
                     
@@ -464,6 +445,4 @@ def render_resy_assistant():
                     if audio_html:
                         st.components.v1.html(audio_html, height=0)
                         st.audio(base64.b64decode(audio_html.split(',')[1].replace('">', '')), format="audio/mp3")
-
-# Call Resy
-render_resy_assistant()
+        st.markdown('</div>', unsafe_allow_html=True)

@@ -360,34 +360,6 @@ def instructions_page():
     
     st.info("💡 **Pro Tip:** Sharing your Google Sheet ID across different departments prevents paying for the same address twice!")
 
-# --- Main Flow ---
-st.sidebar.title("🌍 Geocoding System")
-
-# NEW: Resy at the top of Sidebar
-render_resy_assistant()
-
-if st.session_state.configured:
-    st.sidebar.success("✅ Service Active")
-else:
-    st.sidebar.warning("⚠️ Pending Config")
-
-st.sidebar.markdown("---")
-page = st.sidebar.radio("Navigation", ["📖 Instructions", "⚙️ Configuration", "🔍 Lookup", "📊 Batch", "📈 Stats", "🔍 Review Queue"])
-st.sidebar.markdown("---")
-
-if page == "📖 Instructions":
-    instructions_page()
-elif page == "⚙️ Configuration":
-    configuration_page()
-elif page == "🔍 Lookup":
-    main_page()
-elif page == "📊 Batch":
-    batch_page()
-elif page == "📈 Stats":
-    stats_page()
-elif page == "🔍 Review Queue":
-    review_page()
-
 # --- Sidebar Integrated Resy Assistant ---
 def render_resy_assistant():
     """Renders Resy as a floating-style chatbox at the top of the sidebar."""
@@ -446,3 +418,32 @@ def render_resy_assistant():
                         st.components.v1.html(audio_html, height=0)
                         st.audio(base64.b64decode(audio_html.split(',')[1].replace('">', '')), format="audio/mp3")
         st.markdown('</div>', unsafe_allow_html=True)
+
+# --- Main Flow ---
+st.sidebar.title("🌍 Geocoding System")
+
+# NEW: Resy at the top of Sidebar
+render_resy_assistant()
+
+if st.session_state.configured:
+    st.sidebar.success("✅ Service Active")
+else:
+    st.sidebar.warning("⚠️ Pending Config")
+
+st.sidebar.markdown("---")
+page = st.sidebar.radio("Navigation", ["📖 Instructions", "⚙️ Configuration", "🔍 Lookup", "📊 Batch", "📈 Stats", "🔍 Review Queue"])
+st.sidebar.markdown("---")
+
+if page == "📖 Instructions":
+    instructions_page()
+elif page == "⚙️ Configuration":
+    configuration_page()
+elif page == "🔍 Lookup":
+    main_page()
+elif page == "📊 Batch":
+    batch_page()
+elif page == "📈 Stats":
+    stats_page()
+elif page == "🔍 Review Queue":
+    review_page()
+

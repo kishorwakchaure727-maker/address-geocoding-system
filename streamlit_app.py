@@ -23,6 +23,7 @@ import base64
 import pandas as pd
 import google.generativeai as genai
 from gtts import gTTS
+from streamlit_mic_recorder import mic_recorder
 
 # --- AI Assistant Persona ---
 ASSISTANT_SYSTEM_PROMPT = """
@@ -406,7 +407,26 @@ def render_resy_assistant():
             
         if st.session_state.show_resy:
             st.markdown("---")
-            user_input = st.text_input("Ask me anything:", key="resy_input_sb_v1", placeholder="How do I use Batch?")
+            
+            # Voice Input using mic_recorder
+            st.write("🎙️ **Voice Command**")
+            audio = mic_recorder(
+                start_prompt="Start Recording",
+                stop_prompt="Stop Recording",
+                key="resy_mic_v1",
+                use_container_width=True
+            )
+            
+            voice_text = ""
+            if audio:
+                # streamlit-mic-recorder returns 'text' if STT is active or the raw audio bytes
+                # We'll prioritize the transcribed text if available
+                voice_text = audio.get('text', '')
+                if voice_text:
+                    st.success(f"I heard: {voice_text}")
+            
+            # Text Input (Option)
+            user_input = st.text_input("Or type here:", key="resy_input_sb_v1", placeholder="How do I use Batch?", value=voice_text)
             
             if user_input:
                 with st.spinner("Thinking..."):

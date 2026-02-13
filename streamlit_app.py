@@ -31,6 +31,54 @@ import pandas as pd
 from datetime import datetime
 import tempfile
 import json
+import base64
+import google.generativeai as genai
+from gtts import gTTS
+
+# --- AI Assistant Persona ---
+ASSISTANT_SYSTEM_PROMPT = """
+You are "LuxeStore Assistant", a high-end, friendly, and professional voice-enabled guide for this 
+Address Geocoding & Verification System.
+
+Your purpose is to explain the app to users verbally.
+Key facts about the app:
+1. It standardizes company addresses (STREET ADDRESS1, CITY NAME, PIN CODE, etc.).
+2. It uses multi-tier caching (Session, SQLite, Google Sheets) to save costs.
+3. It has a "Fully Agentic Mode" using Gemini AI to verify addresses by searching the web.
+4. It features a batch processing tool for CSV files, analytics stats, and a manual Review Queue.
+
+Keep your responses VERY CONCISE (max 2-3 sentences) because you are being converted to voice.
+Sound enthusiastic, premium, and helpful. Always greet the user warmly if it's the start of the conversation.
+"""
+
+def get_ai_assistant_response(user_text):
+    """Generate a response from Gemini for the voice assistant."""
+    api_key = st.session_state.get('ai_key') or os.getenv('GOOGLE_AI_API_KEY')
+    if not api_key:
+        return "I'd love to help, but I need a Google AI API Key configured first! Please check the Configuration tab."
+    
+    try:
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('gemini-1.5-pro')
+        response = model.generate_content(f"System: {ASSISTANT_SYSTEM_PROMPT}\nUser: {user_text}")
+        return response.text
+    except Exception as e:
+        return f"I'm having trouble thinking right now. Error: {str(e)}"
+
+def speak_text(text):
+    """Converts text to speech and returns an HTML audio tag for autoplay."""
+    try:
+        tts = gTTS(text=text, lang='en', slow=False)
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as fp:
+            tts.save(fp.name)
+            with open(fp.name, "rb") as audio_file:
+                audio_bytes = audio_file.read()
+            os.remove(fp.name)
+            
+            audio_base64 = base64.b64encode(audio_bytes).decode()
+            return f'<audio autoplay="true" src="data:audio/mp3;base64,{audio_base64}">'
+    except Exception as e:
+        return ""
 
 
 # Page configuration
@@ -393,27 +441,6 @@ def main_page():
                 if record.get('AI SOURCE URL'):
                     st.write(f"**Source Website Found:** [{record.get('AI SOURCE URL')}]({record.get('AI SOURCE URL')})")
             
-            # Agentic AI Verification Result
-            if record.get('AI VERIFICATION STATUS') and record.get('AI VERIFICATION STATUS') != 'skipped':
-                st.markdown("---")
-                st.subheader("🤖 AI Verification Result")
-                
-                status = record.get('AI VERIFICATION STATUS')
-                confidence = float(record.get('AI CONFIDENCE', 0))
-                
-                if status == 'verified':
-                    st.success(f"**Verified with AI** (Confidence: {confidence*100:.1f}%)")
-                elif status == 'uncertain':
-                    st.warning(f"**AI Uncertain** (Confidence: {confidence*100:.1f}%)")
-                else:
-                    st.error(f"**AI Verification Error**")
-                
-                if record.get('NOTES'):
-                    st.info(f"**AI Insight:** {record.get('NOTES')}")
-                    
-                if record.get('AI SOURCE URL'):
-                    st.write(f"**Source Website Found:** [{record.get('AI SOURCE URL')}]({record.get('AI SOURCE URL')})")
-            
             # Map
             if record.get('LAT') and record.get('LNG'):
                 st.subheader("🗺️ Map")
@@ -649,6 +676,46 @@ def instructions_page():
     st.info("💡 **Pro Tip:** Sharing your Google Sheet with team members allows everyone to benefit from shared caching!")
 
 
+def ai_assistant_page():
+    """AI Voice Assistant page."""
+    st.title("🤖 LuxeStore AI Voice Assistant")
+    st.markdown("""
+    Welcome! I am your interactive guide. Ask me anything about how this application works, 
+    the purpose of the system, or how to get started. 
+    **I will reply to you verbally!**
+    """)
+    
+    st.info("💡 **Try asking:** 'What is this app for?' or 'Tell me about Agentic Mode.'")
+    
+    user_input = st.text_input("Ask your question here:", key="assistant_input")
+    
+    if st.button("🗣️ Ask Assistant", type="primary") or user_input:
+        if user_input:
+            with st.spinner("LuxeStore Assistant is thinking..."):
+                reply = get_ai_assistant_response(user_input)
+                
+            st.subheader("Assistant Reply:")
+            st.write(reply)
+            
+            # Audio generation and playback
+            audio_html = speak_text(reply)
+            if audio_html:
+                st.components.v1.html(audio_html, height=0)
+                st.audio(base64.b64decode(audio_html.split(',')[1].replace('">', '')), format="audio/mp3")
+        else:
+            st.warning("Please type a question first!")
+    
+    st.markdown("---")
+    st.subheader("Capabilities")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.write("✅ **Verbal Instructions**: No need to read long manuals.")
+        st.write("✅ **Feature Explanations**: Understand the technical magic behind-the-scenes.")
+    with col2:
+        st.write("✅ **Instant Onboarding**: Get up to speed in seconds.")
+        st.write("✅ **Premium Experience**: Powered by Gemini 1.5 Pro.")
+
+
 # Sidebar navigation
 st.sidebar.title("🌍 Address Geocoding")
 
@@ -662,7 +729,7 @@ st.sidebar.markdown("---")
 
 page = st.sidebar.radio(
     "Navigation",
-    ["📖 Instructions", "⚙️ Configuration", "🔍 Lookup", "📊 Batch", "📈 Stats", "🔍 Review Queue"]
+    ["📖 Instructions", "🤖 AI Assistant", "⚙️ Configuration", "🔍 Lookup", "📊 Batch", "📈 Stats", "🔍 Review Queue"]
 )
 
 st.sidebar.markdown("---")
@@ -682,6 +749,8 @@ if st.session_state.configured and st.session_state.service:
 # Route to pages
 if page == "📖 Instructions":
     instructions_page()
+elif page == "🤖 AI Assistant":
+    ai_assistant_page()
 elif page == "⚙️ Configuration":
     configuration_page()
 elif page == "🔍 Lookup":

@@ -212,6 +212,24 @@ def main_page():
             with col2:
                 st.subheader("📊 Details")
                 st.metric("Confidence", f"{float(record.get('CONFIDENCE', 0))*100:.1f}%")
+                
+                # Verification Links
+                st.markdown("---")
+                st.write("**🔗 Verification Toolkit**")
+                
+                maps_link = record.get('MAPS LINK')
+                if maps_link:
+                    st.link_button("🗺️ View on Google Maps", maps_link, use_container_width=True)
+                
+                search_link = record.get('SEARCH LINK')
+                if search_link:
+                    st.link_button("🔍 Source Search", search_link, use_container_width=True)
+                
+                # AI Discovery Link (Direct sub-page)
+                ai_url = record.get('AI SOURCE URL')
+                if ai_url:
+                    st.success(f"🌐 **Direct Source Found:**\n[{ai_url}]({ai_url})")
+
                 if record.get('AI VERIFICATION STATUS'):
                     st.info(f"AI Status: {record.get('AI VERIFICATION STATUS')}")
             

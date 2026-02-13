@@ -37,7 +37,7 @@ from gtts import gTTS
 
 # --- AI Assistant Persona ---
 ASSISTANT_SYSTEM_PROMPT = """
-You are "LuxeStore Assistant", a high-end, friendly, and professional voice-enabled guide for this 
+You are "Resy", a high-end, friendly, and professional voice-enabled guide for this 
 Address Geocoding & Verification System.
 
 Your purpose is to explain the app to users verbally.
@@ -51,8 +51,8 @@ Keep your responses VERY CONCISE (max 2-3 sentences) because you are being conve
 Sound enthusiastic, premium, and helpful. Always greet the user warmly if it's the start of the conversation.
 """
 
-def get_ai_assistant_response(user_text):
-    """Generate a response from Gemini for the voice assistant."""
+def get_resy_response(user_text):
+    """Generate a response from Gemini for Resy."""
     api_key = st.session_state.get('ai_key') or os.getenv('GOOGLE_AI_API_KEY')
     if not api_key:
         return "I'd love to help, but I need a Google AI API Key configured first! Please check the Configuration tab."
@@ -100,6 +100,44 @@ if 'configured' not in st.session_state:
 if 'service' not in st.session_state:
     st.session_state.service = None
 
+# --- Render Resy (Floating Assistant) ---
+def render_floating_assistant():
+    """Renders a persistent companion (Resy) for help and guidance."""
+    # State for visibility
+    if 'show_assistant' not in st.session_state:
+        st.session_state.show_assistant = False
+
+    # Side-bar call-to-action (Placed at the top of sidebar)
+    st.sidebar.markdown("### 🤖 Assistant: Resy")
+    if st.sidebar.button("✨ Talk to Resy (Voice AI)", type="primary", use_container_width=True, key="resy_sidebar_toggle"):
+        st.session_state.show_assistant = not st.session_state.show_assistant
+        st.rerun()
+
+    if st.session_state.show_assistant:
+        st.markdown("---")
+        with st.container(border=True):
+            st.subheader("🤖 Resy: Your AI Guide")
+            st.info("I am Resy! I can explain how to use this app or help you with configuration. Ask me anything!")
+            
+            user_input = st.text_input("How can I help you?", key="resy_chat_input", placeholder="e.g. What does this app do?")
+            
+            if user_input:
+                with st.spinner("Resy is thinking..."):
+                    reply = get_resy_response(user_input)
+                    st.success(f"**Resy:** {reply}")
+                    
+                    audio_html = speak_text(reply)
+                    if audio_html:
+                        st.components.v1.html(audio_html, height=0)
+                        st.audio(base64.b64decode(audio_html.split(',')[1].replace('">', '')), format="audio/mp3")
+            
+            if st.button("Close Resy Window", key="close_resy_btn"):
+                st.session_state.show_assistant = False
+                st.rerun()
+    st.sidebar.markdown("---")
+
+render_floating_assistant()
+
 
 def apply_runtime_config():
     """Apply configuration from session state to environment."""
@@ -142,7 +180,13 @@ def configuration_page():
     st.title("⚙️ Configuration")
     st.markdown("Enter your API credentials to use the Address Geocoding System.")
     
-    st.info("💡 **Don't have credentials yet?** Check the [SETUP_GUIDE.md](https://github.com) for instructions on getting Google Maps API key and setting up Google Sheets.")
+    col1, col2 = st.columns([0.7, 0.3])
+    with col1:
+        st.info("💡 **Don't have credentials yet?** Check the [SETUP_GUIDE.md](https://github.com) for instructions.")
+    with col2:
+        if st.button("🤖 Guide me, Resy!", use_container_width=True):
+            st.session_state.show_assistant = True
+            st.rerun()
     
     with st.form("config_form"):
         st.subheader("🔑 Google Maps API")
@@ -676,126 +720,7 @@ def instructions_page():
     st.info("💡 **Pro Tip:** Sharing your Google Sheet with team members allows everyone to benefit from shared caching!")
 
 
-def render_floating_assistant():
-    """Renders a floating AI assistant button and modal at bottom right."""
-    # Hide from main navigation, but keep the logic
-    if not st.session_state.configured:
-        return
-
-    # Floating UI CSS
-    st.markdown("""
-        <style>
-        .floating-bot {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            width: 60px;
-            height: 60px;
-            background: linear-gradient(135deg, #6e8efb, #a777e3);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-            cursor: pointer;
-            z-index: 999999;
-            transition: all 0.3s ease;
-            border: 2px solid white;
-        }
-        .floating-bot:hover {
-            transform: scale(1.1) rotate(5deg);
-        }
-        .bot-icon {
-            font-size: 30px;
-        }
-        </style>
-    """, unsafe_allow_html=True)
-
-    # State for visibility
-    if 'show_assistant' not in st.session_state:
-        st.session_state.show_assistant = False
-
-    # Floating Button (using a container to capture clicks if possible, or just st.button styled)
-    # Since st.button can't be fixed easily, we use a trick:
-    # We display a normal streamlit button in the sidebar or bottom that toggles the view,
-    # OR we use custom HTML and a hidden streamlit button.
-    
-    with st.sidebar:
-        st.markdown("---")
-        if st.button("🤖 Toggle AI Guide", use_container_width=True):
-            st.session_state.show_assistant = not st.session_state.show_assistant
-    
-    if st.session_state.show_assistant:
-        with st.container():
-            st.markdown("---")
-            st.subheader("🤖 LuxeStore AI Voice Assistant")
-            st.caption("Ask me about the app. I will reply verbally!")
-            
-            user_input = st.text_input("Ask your question:", key="floating_assistant_input")
-            
-            if user_input:
-                with st.spinner("Thinking..."):
-                    reply = get_ai_assistant_response(user_input)
-                    st.write(reply)
-                    
-                    audio_html = speak_text(reply)
-                    if audio_html:
-                        st.components.v1.html(audio_html, height=0)
-                        st.audio(base64.b64decode(audio_html.split(',')[1].replace('">', '')), format="audio/mp3")
-            
-            if st.button("Close Assistant"):
-                st.session_state.show_assistant = False
-                st.rerun()
-
-
-# Sidebar navigation
-st.sidebar.title("🌍 Address Geocoding")
-
-# Configuration status indicator
-if st.session_state.configured:
-    st.sidebar.success("✅ Configured")
-else:
-    st.sidebar.warning("⚠️ Not Configured")
-
-st.sidebar.markdown("---")
-
-page = st.sidebar.radio(
-    "Navigation",
-    ["📖 Instructions", "⚙️ Configuration", "🔍 Lookup", "📊 Batch", "📈 Stats", "🔍 Review Queue"]
-)
-
-st.sidebar.markdown("---")
-
-# Quick stats in sidebar if configured
-if st.session_state.configured and st.session_state.service:
-    try:
-        from src.storage import get_cache
-        cache = get_cache()
-        cache_stats = cache.get_stats()
-        
-        st.sidebar.caption("**Quick Stats**")
-        st.sidebar.caption(f"💾 Cache: {cache_stats.get('memory_entries', 0)} entries")
-    except:
-        pass
-
-# Route to pages
-if page == "📖 Instructions":
-    instructions_page()
-elif page == "⚙️ Configuration":
-    configuration_page()
-elif page == "🔍 Lookup":
-    main_page()
-elif page == "📊 Batch":
-    batch_page()
-elif page == "📈 Stats":
-    stats_page()
-elif page == "🔍 Review Queue":
-    review_page()
-
 # Footer
 st.sidebar.markdown("---")
 st.sidebar.caption("Address Geocoding System v1.0")
 st.sidebar.caption("Built with ❤️ using Streamlit")
-
-# Floating Assistant
-render_floating_assistant()

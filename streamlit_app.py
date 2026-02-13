@@ -134,7 +134,7 @@ def configuration_page():
     with col1:
         st.info("💡 **Don't have credentials yet?** Check the [SETUP_GUIDE.md](https://github.com) for instructions.")
     with col2:
-        if st.button("🤖 Guide me, Resy!", use_container_width=True):
+        if st.button("🤖 Guide me, Resy!", use_container_width=True, key="config_resy_guide"):
             st.session_state.show_resy = True
             st.rerun()
     
@@ -262,17 +262,65 @@ def review_page():
 
 
 def instructions_page():
-    """Instructions page."""
-    st.title("📖 Instructions")
-    st.markdown("""
-    ### 🌟 Overview
-    This system standardizes company addresses using Google Maps and AI verification.
+    """Detailed 'How it Works' and Instructions page."""
+    st.title("📖 How it Works & Instructions")
     
-    ### 🛠️ How to use
-    1. **Configure** your API keys.
-    2. Use **Lookup** for single searches.
-    3. Use **Batch** for CSV processing.
+    st.markdown("""
+    ### 🌍 Application Overview
+    The **Address Geocoding System** is a smart, company-focused platform designed to standardize addresses, find precise coordinates, and verify data through AI.
+
+    ### 🛠️ The Multi-Tier Lookup Architecture
+    The system optimizes performance and cost by checking sources in this order:
+    
+    ```mermaid
+    graph TD
+        A[User Query] --> B{Local Cache}
+        B -- Found --> C[Return Result]
+        B -- Not Found --> D{SQLite DB}
+        D -- Found --> C
+        D -- Not Found --> E{Google Sheets}
+        E -- Found --> C
+        E -- Not Found --> F[Google Maps API]
+        F --> G[Store in Cache & Sheets]
+        G --> C
+    ```
+    
+    1.  **⚡ Local session Cache** (Instant): Checks if you looked up this company in the current session.
+    2.  **💾 SQLite Database** (Fast): Persistent local cache on the server.
+    3.  **📊 Shared Google Sheets** (Team-wide): Searches your team's centralized registry.
+    4.  **🤝 Intelligent Fuzzy Matching**: Finds similar names (e.g., "Tata Services" vs "Tata Consultancy Services").
+    5.  **🌏 Google Maps Geocoding API**: Used only as a final fallback for brand new addresses.
+    6.  **🤖 Agentic AI Verification**: Optional layer that searches the web to confirm location details.
+
+    ### 🚀 Getting Started Guide
+    
+    #### 1. ⚙️ Initial Configuration
+    Before performing lookups, setup your credentials in the **Configuration** tab:
+    - **Google Maps Key**: Found in your Google Cloud Console.
+    - **Sheet ID**: The unique ID from your Google Sheet URL.
+    - **Service JSON**: The credentials file that gives the app access to your sheet.
+    
+    #### 2. 🔍 Single Company Lookup
+    - Enter the **Company Name** (normalized automatically).
+    - Provide an optional **Site Hint** (e.g., "India" or "London") for better accuracy.
+    - View results with confidence scores and interactive maps.
+    
+    #### 3. 📊 Batch CSV Processing
+    - Upload a CSV with a `company` column.
+    - Process hundreds of records automatically while you wait.
+    - Download the cleaned and geocoded results as a new CSV.
+
+    ### 🎯 Quality Controls & Review
+    - **Confidence Score**: Every result is scored (0-1). Scores below 0.8 are flagged.
+    - **Review Queue**: High-priority manual work queue for uncertain results.
+    - **QA Status**: Automatic tagging of results (Success, Review, Low Confidence).
+
+    ### 💰 Cost Optimization Tips
+    - **Multi-tier caching** can save up to 90% in Google Maps API costs.
+    - Sharing a single Google Sheet ID with your entire team builds a **Shared Brain**—once anyone geocodes a company, everyone benefits instantly!
     """)
+    
+    st.info("💡 **Pro Tip:** Sharing your Google Sheet ID across different departments prevents paying for the same address twice!")
 
 # --- Main Flow ---
 st.sidebar.title("🌍 Geocoding System")
@@ -299,18 +347,85 @@ elif page == "📈 Stats":
 elif page == "🔍 Review Queue":
     review_page()
 
+# --- Truly Floating Resy Assistant ---
 def render_resy_assistant():
-    """Renders Resy in the sidebar."""
-    st.sidebar.markdown("---")
-    with st.sidebar.expander("🤖 **Resy: AI Voice Guide**", expanded=st.session_state.show_resy):
-        user_input = st.text_input("Ask Resy:", key="resy_input_final")
-        if user_input:
-            with st.spinner("Thinking..."):
-                reply = get_resy_response(user_input)
-                st.write(f"**Resy:** {reply}")
-                audio = speak_text(reply)
-                if audio:
-                    st.components.v1.html(audio, height=0)
-                    st.audio(base64.b64decode(audio.split(',')[1].replace('">', '')), format="audio/mp3")
+    """Renders Resy as a floating companion at the bottom right."""
+    # State for visibility
+    if 'show_resy' not in st.session_state:
+        st.session_state.show_resy = False
 
+    # Floating UI Styles - Targeted via specialized container
+    st.markdown("""
+        <style>
+        /* Target the specialized container for the floating button */
+        .resy-button-container {
+            position: fixed !important;
+            bottom: 30px !important;
+            right: 30px !important;
+            z-index: 1000000 !important;
+        }
+        
+        .resy-button-container button {
+            width: 180px !important;
+            height: 55px !important;
+            border-radius: 30px !important;
+            background: linear-gradient(135deg, #6e8efb, #a777e3) !important;
+            color: white !important;
+            font-weight: bold !important;
+            font-size: 16px !important;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.35) !important;
+            border: 2px solid rgba(255,255,255,0.4) !important;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+        }
+        
+        .resy-button-container button:hover {
+            transform: scale(1.08) translateY(-3px) !important;
+            box-shadow: 0 10px 30px rgba(110, 142, 251, 0.5) !important;
+        }
+
+        /* Fixed Chat Window container */
+        div[data-testid="stVerticalBlock"]:has(div.resy-chat-marker) {
+            position: fixed !important;
+            bottom: 100px !important;
+            right: 30px !important;
+            width: 420px !important;
+            background: #ffffff !important;
+            padding: 25px !important;
+            border-radius: 20px !important;
+            box-shadow: 0 15px 50px rgba(0,0,0,0.3) !important;
+            z-index: 999999 !important;
+            border: 1px solid rgba(0,0,0,0.1) !important;
+            backdrop-filter: blur(10px);
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    # Floating Button inside targeted container
+    st.markdown('<div class="resy-button-container">', unsafe_allow_html=True)
+    btn_label = "❌ Close Resy" if st.session_state.show_resy else "🤖 Talk to Resy"
+    if st.button(btn_label, key="resy_floating_trigger_v7"):
+        st.session_state.show_resy = not st.session_state.show_resy
+        st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    if st.session_state.show_resy:
+         # Marker div to target the vertical block
+        st.markdown('<div class="resy-chat-marker"></div>', unsafe_allow_html=True)
+        with st.container():
+            st.subheader("🤖 Resy: Your AI Guide")
+            st.caption("Ask me anything about the app!")
+            
+            user_input = st.text_input("How can I help you today?", key="resy_input_v7", placeholder="e.g. How do I use batch processing?")
+            
+            if user_input:
+                with st.spinner("Resy is thinking..."):
+                    reply = get_resy_response(user_input)
+                    st.info(f"**Resy:** {reply}")
+                    
+                    audio_html = speak_text(reply)
+                    if audio_html:
+                        st.components.v1.html(audio_html, height=0)
+                        st.audio(base64.b64decode(audio_html.split(',')[1].replace('">', '')), format="audio/mp3")
+
+# Call Resy
 render_resy_assistant()

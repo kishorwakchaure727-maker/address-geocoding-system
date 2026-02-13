@@ -676,44 +676,76 @@ def instructions_page():
     st.info("💡 **Pro Tip:** Sharing your Google Sheet with team members allows everyone to benefit from shared caching!")
 
 
-def ai_assistant_page():
-    """AI Voice Assistant page."""
-    st.title("🤖 LuxeStore AI Voice Assistant")
+def render_floating_assistant():
+    """Renders a floating AI assistant button and modal at bottom right."""
+    # Hide from main navigation, but keep the logic
+    if not st.session_state.configured:
+        return
+
+    # Floating UI CSS
     st.markdown("""
-    Welcome! I am your interactive guide. Ask me anything about how this application works, 
-    the purpose of the system, or how to get started. 
-    **I will reply to you verbally!**
-    """)
+        <style>
+        .floating-bot {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #6e8efb, #a777e3);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            cursor: pointer;
+            z-index: 999999;
+            transition: all 0.3s ease;
+            border: 2px solid white;
+        }
+        .floating-bot:hover {
+            transform: scale(1.1) rotate(5deg);
+        }
+        .bot-icon {
+            font-size: 30px;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    # State for visibility
+    if 'show_assistant' not in st.session_state:
+        st.session_state.show_assistant = False
+
+    # Floating Button (using a container to capture clicks if possible, or just st.button styled)
+    # Since st.button can't be fixed easily, we use a trick:
+    # We display a normal streamlit button in the sidebar or bottom that toggles the view,
+    # OR we use custom HTML and a hidden streamlit button.
     
-    st.info("💡 **Try asking:** 'What is this app for?' or 'Tell me about Agentic Mode.'")
+    with st.sidebar:
+        st.markdown("---")
+        if st.button("🤖 Toggle AI Guide", use_container_width=True):
+            st.session_state.show_assistant = not st.session_state.show_assistant
     
-    user_input = st.text_input("Ask your question here:", key="assistant_input")
-    
-    if st.button("🗣️ Ask Assistant", type="primary") or user_input:
-        if user_input:
-            with st.spinner("LuxeStore Assistant is thinking..."):
-                reply = get_ai_assistant_response(user_input)
-                
-            st.subheader("Assistant Reply:")
-            st.write(reply)
+    if st.session_state.show_assistant:
+        with st.container():
+            st.markdown("---")
+            st.subheader("🤖 LuxeStore AI Voice Assistant")
+            st.caption("Ask me about the app. I will reply verbally!")
             
-            # Audio generation and playback
-            audio_html = speak_text(reply)
-            if audio_html:
-                st.components.v1.html(audio_html, height=0)
-                st.audio(base64.b64decode(audio_html.split(',')[1].replace('">', '')), format="audio/mp3")
-        else:
-            st.warning("Please type a question first!")
-    
-    st.markdown("---")
-    st.subheader("Capabilities")
-    col1, col2 = st.columns(2)
-    with col1:
-        st.write("✅ **Verbal Instructions**: No need to read long manuals.")
-        st.write("✅ **Feature Explanations**: Understand the technical magic behind-the-scenes.")
-    with col2:
-        st.write("✅ **Instant Onboarding**: Get up to speed in seconds.")
-        st.write("✅ **Premium Experience**: Powered by Gemini 1.5 Pro.")
+            user_input = st.text_input("Ask your question:", key="floating_assistant_input")
+            
+            if user_input:
+                with st.spinner("Thinking..."):
+                    reply = get_ai_assistant_response(user_input)
+                    st.write(reply)
+                    
+                    audio_html = speak_text(reply)
+                    if audio_html:
+                        st.components.v1.html(audio_html, height=0)
+                        st.audio(base64.b64decode(audio_html.split(',')[1].replace('">', '')), format="audio/mp3")
+            
+            if st.button("Close Assistant"):
+                st.session_state.show_assistant = False
+                st.rerun()
 
 
 # Sidebar navigation
@@ -729,7 +761,7 @@ st.sidebar.markdown("---")
 
 page = st.sidebar.radio(
     "Navigation",
-    ["📖 Instructions", "🤖 AI Assistant", "⚙️ Configuration", "🔍 Lookup", "📊 Batch", "📈 Stats", "🔍 Review Queue"]
+    ["📖 Instructions", "⚙️ Configuration", "🔍 Lookup", "📊 Batch", "📈 Stats", "🔍 Review Queue"]
 )
 
 st.sidebar.markdown("---")
@@ -749,8 +781,6 @@ if st.session_state.configured and st.session_state.service:
 # Route to pages
 if page == "📖 Instructions":
     instructions_page()
-elif page == "🤖 AI Assistant":
-    ai_assistant_page()
 elif page == "⚙️ Configuration":
     configuration_page()
 elif page == "🔍 Lookup":
@@ -766,3 +796,6 @@ elif page == "🔍 Review Queue":
 st.sidebar.markdown("---")
 st.sidebar.caption("Address Geocoding System v1.0")
 st.sidebar.caption("Built with ❤️ using Streamlit")
+
+# Floating Assistant
+render_floating_assistant()

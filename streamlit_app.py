@@ -547,3 +547,10 @@ elif page == "📈 Stats":
 elif page == "🔍 Review Queue":
     review_page()
 
+# Footer
+st.markdown("---")
+st.markdown(
+    '<div style="text-align:center; color:#777; font-size:0.9em; padding-bottom:10px;">Address Geocoding System a Trademark of RealMan AI Pvt Ltd. Owned & Operated by Kishor Wakchaure</div>',
+    unsafe_allow_html=True
+)
+

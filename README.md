@@ -159,3 +159,7 @@ For questions or issues:
 ---
 
 **Built with ❤️ using Streamlit and Google APIs**
+
+## Copyright
+
+Address Geocoding System a Trademark of RealMan AI Pvt Ltd. Owned & Operated by Kishor Wakchaure
